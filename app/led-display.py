@@ -1,7 +1,8 @@
 # coding=utf-8
 import logging
 import sys
-from app.RPi import GPIO
+import time
+from RPi import GPIO
 
 __author__ = 'Xezz'
 __version__ = '0.1'
@@ -9,19 +10,23 @@ __test__ = True
 
 
 def main():
-    value_to_led = [11, 13, 15, 17]
+    value_to_led = [11, 12, 13, 15]
     display = LedDisplay(value_to_led)
-    GPIO.setmode(GPIO.BCM)
-
-    compare = raw_input('> ')
-    try:
-        compare = int(compare)
-        display.lightLEDs(compare)
-    except ValueError as e:
-        print e.message
-        GPIO.cleanup()
-        sys.exit(1)
-
+    #GPIO.setmode(GPIO.BOARD)
+    while True:
+        try:
+            compare = raw_input('> ')
+            try:
+                compare = int(compare)
+                display.lightLEDs(compare)
+            except ValueError as e:
+                print e.message
+                sys.exit(1)
+            time.sleep(1)
+        except (KeyboardInterrupt, SystemExit):
+            display.lightLEDs(0)
+            GPIO.cleanup()
+            break
 
 class LedDisplay(object):
     def __init__(self, LEDs):
@@ -36,16 +41,18 @@ class LedDisplay(object):
         self.initializePins()
 
     def initializePins(self):
-        GPIO.setmode(GPIO.BCM)
+        GPIO.setmode(GPIO.BOARD)
         for v in self.leds.itervalues():
             GPIO.setup(v, GPIO.OUT)
 
     def lightLEDs(self, *args):
         for num in args:
             if isinstance(num, int) and 0 <= num:
-                if num <= self.max_value:
-                    logging.warn('Input is bigger than possible. max{} / input {}'.format(self.max_value, num))
+                if num > self.max_value:
+                    logging.warn('Input is bigger than possible. max {} / input {}'.format(self.max_value, num))
                 for k, v in self.leds.iteritems():
+                    # binary AND, turn on all LED's that fit the bitmask
+                    # and turn of those that do not fit the bitmask
                     GPIO.output(v, num & k > 0)
 
 if __name__ == "__main__":
